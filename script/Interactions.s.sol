@@ -17,15 +17,21 @@ contract ClaimAirdrop is Script {
     bytes32[] proof = [PROOF_ONE, PROOF_TWO];
     bytes private SIGNATURE = hex"fbd2270e6f23fb5fe9248480c0f4be8a4e9bd77c3ad0b1333cc60b5debc511602a2a06c24085d8d7c038bad84edc53664c8ce0346caeaa3570afec0e61144dc11c";
 
-    function run() external {
-        address mostRecentlyDeployed = DevOpsTools.get_most_recent_deployment("MerkleAirdrop", block.chainid);
-        claimAirdrop(mostRecentlyDeployed);
-    }
+    // function run() external {
+    //     address mostRecentlyDeployed = DevOpsTools.get_most_recent_deployment("MerkleAirdrop", block.chainid);
+    //     verifyAirdrop(mostRecentlyDeployed);
+    // }
     
-    function claimAirdrop(address airdropAddress) public {
+    function verifyAirdrop(address airdropAddress) public {
         vm.startBroadcast();
         (uint8 v, bytes32 r, bytes32 s) = splitSignature(SIGNATURE);
-        MerkleAirdrop(airdropAddress).claim(CLAIMING_ADDRESS, CLAMING_AMOUNT, proof, v, r, s);
+        MerkleAirdrop(airdropAddress).verifyEligibility(CLAIMING_ADDRESS, CLAMING_AMOUNT, proof, v, r, s);
+        vm.stopBroadcast();
+    }
+
+    function claimAirdrop(address airdropAddress) public {
+        vm.startBroadcast();
+        MerkleAirdrop(airdropAddress).claim(CLAIMING_ADDRESS);
         vm.stopBroadcast();
     }
 

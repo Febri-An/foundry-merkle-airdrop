@@ -17,6 +17,10 @@ contract MerkleAirdropTest is ZkSyncChainChecker, Test {
     uint256 public AMOUNT_TO_SEND = AMOUNT_TO_CLAIM * 4;
     bytes32 proofOne = 0x0fd7c981d39bece61f7499702bf59b3114a90e66b51ba2c53abdf7b62986c00a;
     bytes32 proofTwo = 0xe5ebd1e1b5a5478a944ecab36a9a954ac3b6b8216875f6524caa7a1d87096576;
+    uint256 public constant TIME_INTERVAL = 30 days;
+    uint256 public constant INITIAL_CLAIM_PERCENTAGE = 4; // 25% of the total amount
+    uint256 public constant VESTING_RATE = 75; // 75% of the remaining amount
+    uint256 public constant PERCENTAGE_DENOMINATOR = 100;
     bytes32[] public PROOF = [
         proofOne,
         proofTwo
@@ -46,10 +50,16 @@ contract MerkleAirdropTest is ZkSyncChainChecker, Test {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, digest);
 
         // gasPayer pays for the transaction
-        vm.prank(GAS_PAYER);
-        airdrop.claim(USER, AMOUNT_TO_CLAIM, PROOF, v, r, s);
+        vm.startPrank(GAS_PAYER);
+        airdrop.verifyEligibility(USER, AMOUNT_TO_CLAIM, PROOF, v, r, s);
+        uint256 updatedBalance = token.balanceOf(USER);
+        assertEq(updatedBalance, AMOUNT_TO_CLAIM / INITIAL_CLAIM_PERCENTAGE);
 
+        vm.warp(block.timestamp + 30 days + 1);
+
+        airdrop.claim(USER);
+        uint256 expectedClaim = ((AMOUNT_TO_CLAIM * VESTING_RATE) / PERCENTAGE_DENOMINATOR) / INITIAL_CLAIM_PERCENTAGE;
         uint256 endingBalance = token.balanceOf(USER);
-        assertEq(endingBalance, startingBalance + AMOUNT_TO_CLAIM);
+        assertEq(endingBalance, startingBalance + (AMOUNT_TO_CLAIM / 4) + expectedClaim);
     }
 }
